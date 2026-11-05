@@ -1,0 +1,66 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Catálogo de ingredientes y materias primas (Carne, Papa, Tapas, Queso, etc.)
+model Ingredient {
+  id            Int            @id @default(autoincrement())
+  name          String         @unique
+  unit          String         // Ej: gramos, unidades, ml
+  currentStock  Float          @default(0)
+  costPerUnit   Float          // Costo por unidad de medida actual
+  recipeItems   RecipeItem[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// Producto final a la venta (Ej: Empanada de Carne, Empanada Mixta)
+model Product {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  price       Float        // Precio de venta al público
+  recipe      RecipeItem[]
+  saleItems   SaleItem[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// Tabla intermedia: Relaciona qué cantidad de cada ingrediente lleva una empanada (Costeo dinámico)
+model RecipeItem {
+  id           Int        @id @default(autoincrement())
+  productId    Int
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Float      // Cantidad del ingrediente necesaria para 1 unidad
+}
+
+// Registro de Ventas (POS)
+model Sale {
+  id        Int      @id @default(autoincrement())
+  total     Float
+  paymentMethod String @default("Efectivo") // Nuevo campo para el método de pago
+  createdAt DateTime @default(now())
+  items     SaleItem[]
+}
+
+model SaleItem {
+  id        Int     @id @default(autoincrement())
+  saleId    Int
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  subtotal  Float
+}
+
+model PaymentMethod {
+  id      Int     @id @default(autoincrement())
+  name    String  @unique // Ej: Efectivo, Nequi, Davivienda
+  active  Boolean @default(true)
+}
